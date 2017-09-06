@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Game</title>
+	<link rel="stylesheet" type="text/css" href="project.css">
+
+</head>
+
+<body style="background-color:black;" onresize = "gameWindow.resizeCanvas()">
+
+<canvas id="canvas" width="700px" height="700px">xx</canvas>
+
+	<script type="text/javascript">
+	const MAX_HEIGHT = 800;const MAX_WIDTH = 800;
+	var windowScaleW, windowScaleH;
+	var SCALE_W = 1;var SCALE_H = 1;
+
+	//game window in form of object
+	///MAIN GAME OBJECTS---> GAME WINDOW, GAME STATE(PLAY,LOSE,WHO WINS), GAME FUNCTIONS ---->INITIALIZER,GAMELOOP, RUN, ONLOAD FUNCTION(RUN)
+	var backgroundImg = [];
+	var gameWindow = 
+	{
+		canvas : null,
+		context : null,
+		terrain : new Image(),
+		height : 0,
+		width : 0,
+		bg_music : new sound("fighter_song.mp3"),
+		punch1_sound : new sound("punch1.mp3"),
+		punch2_sound : new sound("punch2.mp3"),
+		init : function()//initializes the canvas and context
+			{
+				this.canvas = document.getElementById("canvas");
+				this.context = this.canvas.getContext("2d");
+				this.terrain.src="sprites/terrain.png";
+				for(var i = 1; i <= 16; i++)
+				{
+					var img = new Image();
+					img.src = "sprites/gifback/" + i.toString() + ".png";
+					backgroundImg.push(img);
+				}
+				this.canvas.tabIndex = 1000;
+				this.height = this.canvas.height;
+				this.width = this.canvas.width;
+				SCALE_W = this.width / MAX_WIDTH;
+				SCALE_H = this.height / MAX_HEIGHT;
+				this.context.scale(SCALE_W, SCALE_H);
+				windowScaleW = this.canvas.width / window.innerWidth;
+				windowScaleH = this.canvas.height / window.innerHeight;
+				this.bg_music.play();
+				this.bg_music.volume(.25);
+			},
+		resizeCanvas : function()
+		{
+		
+			if(this.canvas.width/window.innerWidth != windowScaleW )
+			{
+				
+				this.canvas.width = window.innerWidth*windowScaleW;
+			}
+			
+			if(this.canvas.height/window.innerHeight != windowScaleH )
+			{
+				this.canvas.height = window.innerHeight*windowScaleH;
+			}
+			this.height = this.canvas.height;
+			this.width = this.canvas.width;
+			SCALE_W = this.width / MAX_WIDTH;
+			SCALE_H = this.height / MAX_HEIGHT;
+			this.context.scale(SCALE_W, SCALE_H);
+			console.log(SCALE_W, SCALE_H);
+		}
+
+	};
+
+	var gameState = 
+	{
+		PLAY:1,
+		PAUSE:0,
+		WinFighter2:0,
+		WinFighter1:0
+	};
+		
+	function gameLoop()//Main GAME loop
+	{
+		checkInput();
+		update();
+	}
+		
+	function run()
+	{
+		gameWindow.init();//init window
+		initFighters(); //init fighters
+	 	setInterval(gameLoop, 34);
+	}
+		
+	window.onload = function func()
+	{
+ 		run();//runs when system staRTS
+	}
+	
+	function drawText(text)//SCREEN WRITING FN
+	{
+		var ctx = gameWindow.context;
+		ctx.font = "30px Comic Sans MS";
+		ctx.fillStyle = "white";
+		ctx.textAlign = "center";
+		ctx.fillText(text, gameWindow.canvas.width/2, gameWindow.canvas.height/2);
+	}
+
+
+
+
+	
+	///BEGIN EVENT MANAGER..TRIED TO PUT IN A OBJECT, BUT down IS DOING PROBLEM AS AN OBJECT ELEMENT
+
+	var down = [];//array  having down key 
+	function checkInput()//BROWSER EVENT REGISTER
+	{
+		gameWindow.canvas.addEventListener("keydown", keyIsDown, false);
+		gameWindow.canvas.addEventListener("keyup", keyIsUp, false);
+		gameWindow.canvas.addEventListener("resize", gameWindow.resizeCanvas, false);
+	}
+
+	function keyIsDown(e)//adding key to donw
+	{
+		if(down.indexOf(e.keyCode) == -1)
+		{
+			down.push(e.keyCode);
+		}
+	}
+	function keyIsUp(e)//remove key from down
+	{
+		if(down.indexOf(e.keyCode) != -1)
+		{
+			down.splice(down.indexOf(e.keyCode), 1);
+		}
+	}
+
+	function checkKeyDown(x)//checks that a given key x is down
+	{
+		if(x == 'w')
+			x = 87;
+		else if(x == 'a')
+			x=65;
+		else if(x=='s')
+			x=83;
+		else if(x=='d') 
+			x=68;
+		else if(x==' ') 
+			x=32;
+		else if(x == '8')
+			x = 104;
+		else if(x == '4')
+			x=100;
+		else if(x=='5')
+			x=101;
+		else if(x=='6') 
+			x=102;
+		else if(x=='p') 
+			x=80;
+		if(down.indexOf(x)!=-1)
+			return true;
+		else
+			return false;
+	}
+	
+	///EVEN MANAGER OVER
+
+
+
+	var curr_punch = 0;
+
+	/*FIGHTER OBJECTS->(TO DO LATER MAKE AGENT OBJECT AND MAKE NESTED OBJECT AS FIGHTER1 AND FIGHTER2)
+	(THIS WILL HELP IN CREATING JUST ONE DAMAGE AND COLLISION CONTROL)(I THINK)(SOMETHING RELATED TO INHERRITANCE)*/
+
+	
+     function Fighter(xCord, yCord, xDir, _fighter)
+     {
+     	this.imgStand1= new Image();
+    	this.imgStand2= new Image();
+    	this.imgStand1b= new Image();//B=TURNED AROUND
+    	this.imgStand2b = new Image();
+     	this.imgPunch = new Image();
+     	this.imgPunchb = new Image();
+     	this.imgLose = new Image();
+     	this.imgWin = new Image();
+     	this.Upperb = new Image();
+     	this.Upper = new Image();
+     	this.x = xCord;
+     	this.y = yCord;
+     	this.width = 80;//CHANGES WITH PUNCH STATE
+     	this.speed = 5;//INCREASE LATER
+     	this.height = 150;
+     	this.health = 100;
+     	this.uVer = 0;
+     	this.aVer = 0;
+     	this.dir = xDir;
+     	this.shouldMove = 0;
+     	this.currImageTick = 1;//without this image flip toooo fast
+     	this.timeTillNextPunch = 0;
+     	this.isInAir = false;
+     	this.isPunching = false;
+     	this.fighter = _fighter;
+     	this.jump = function()
+     	{	
+     		if(!this.isInAir)
+     		{	
+     			this.uVer = 14;
+     			this.aVer = 0.5;//change soon
+     			this.isInAir = true;
+     		}
+     	};
+     	this.punch = function()
+     	{
+     		this.isPunching = true;//function to set this false at bottom
+     		this.width = 150;
+     		if(curr_punch++ == 0)
+     			gameWindow.punch1_sound.play();
+     		else
+     		{
+     			gameWindow.punch2_sound.play();
+     			curr_punch--;
+     		}
+     		if(checkKeyDown('s') && this.isInAir && this.fighter == 1)
+     		{
+     			this.width = 150;
+     			this.height = 100;
+     		}
+     		if(checkKeyDown('5') && this.isInAir && this.fighter == 2)
+     		{
+     			this.width = 150;
+     			this.height = 100;
+     		}
+     	};
+     	this.getDamaged = function(x)
+		{
+			this.health-=x;
+			if(this.health <= 0)
+			{
+				gameState.PAUSE = 1;
+				if(this.fighter == 1)
+					gameState.WinFighter2 = 1;
+				else
+					gameState.WinFighter1 = 1;
+			}
+		};
+
+    }
+
+
+    var fighter1 = new Fighter(10, 450, 1, 1);
+    var fighter2 = new Fighter(700, 450, -1, 2);
+
+
+		fighter1.update = function()
+     	{
+     		if(checkKeyDown('q') && this.timeTillNextPunch == 0)
+     		{
+     			this.punch();
+     			this.timeTillNextPunch = 30;
+     		}
+     		else if (checkKeyDown('d') && checkKeyDown('w'))
+     		{
+     			this.shouldMove = 1;
+     			this.dir = 1;
+     			this.jump();	
+     		}
+     		else if (checkKeyDown('a') && checkKeyDown('w'))
+     		{
+     			this.shouldMove = 1;
+     			this.dir = -1;
+     			this.jump();	
+     		}
+     		else if(checkKeyDown('w'))
+     			this.jump();
+     		else if(checkKeyDown('d'))
+     		{
+     			this.shouldMove = 1;
+     			this.dir = 1;
+     		}
+     		else if(checkKeyDown('a'))
+     		{
+     			this.shouldMove = 1;
+     			this.dir = -1;
+     		}
+  
+     		if(this.x>=10 && this.x<=750 && this.shouldMove==1)
+     		{
+     			this.x+=(this.dir*this.speed);
+     			this.shouldMove=0;
+     		}
+     		else if(this.x<10)
+     		{
+     			this.x=10;shouldMove=0;
+     		}
+     		else if(this.x>750)
+     		{
+     			this.x=750;this.shouldMove=0;
+     		}
+
+     		this.y-=this.uVer;
+     		this.uVer = this.uVer - this.aVer;
+
+     		if(this.y>=450)
+     		{
+     			this.uVer = 0;
+     			this.aVer = 0;
+     			this.y = 450;
+     			this.isInAir = false;
+     		}
+
+     		if(checkKeyDown(' ') && this.timeTillNextPunch == 0)
+     		{
+     			this.punch();
+     			this.timeTillNextPunch = 25;
+     		}
+     		if(this.timeTillNextPunch!=0)
+     		{
+     			this.timeTillNextPunch--;
+     			if(this.timeTillNextPunch == 20)
+     			{	
+     				this.isPunching = false;
+     				this.width = 80;
+     				this.height = 150;
+     			}
+     		}
+
+     	};
+     	fighter1.isCollidng = function()
+		{	//I KNEW WHAT I AM DOING.. NOW I SEEM TO FORGET .. THANSK TO MY PURSE AND PHONE.. THEY HELPED IN DESIGNING THIS :P
+			//UPDATE COMMENTS PLSSSS/
+			//P.S NO Y PUSH BACK :P UNNOTICABLE ;)/
+			var t1 =  (this.x-fighter2.x)/2; var t2 = (this.y - fighter1.y)/2;
+			if(this.dir == 1 && this.x < fighter2.x)
+			{
+				if((this.x + this.width - fighter2.x) > 0 && Math.abs(fighter1.y - fighter2.y) <80)
+				{
+					if(!this.isPunching)
+						this.x+=t1/4;fighter2.x-=t1/4;
+					return true;
+				}
+			}
+			else if(this.dir == -1 && this.x > fighter2.x)
+			{
+				if((this.x - fighter2.x - this.width) < 0 && Math.abs(fighter1.y - fighter2.y) <80)
+				{
+					//t1+=fighter2.width/2;
+					if(!this.isPunching)
+						this.x+=t1/4;fighter2.x-=t1/4;
+					return true;
+				}
+			}
+			else
+				return false;
+		};
+
+		fighter1.doDamage = function()
+		{
+			if(this.isPunching && this.isCollidng())
+			{
+				if(this.dir!=fighter2.dir)
+					fighter2.getDamaged(10);
+				else
+					fighter2.getDamaged(25);
+			}
+		};
+
+    //REFER FIGHTER 1 FOR COMMENTS
+    fighter2.update = function()
+     	{
+     		if(checkKeyDown('p') && this.timeTillNextPunch == 0)
+     		{
+     			this.punch();
+     			this.timeTillNextPunch = 30;
+     		}
+     		else if (checkKeyDown('6') && checkKeyDown('8'))
+     		{
+     			this.shouldMove = 1;
+     			this.dir = 1;
+     			this.jump();	
+     		}
+     		else if (checkKeyDown('4') && checkKeyDown('8'))
+     		{
+     			this.shouldMove = 1;
+     			this.dir = -1;
+     			this.jump();	
+     		}
+     		else if(checkKeyDown('8'))
+     			this.jump();
+     		else if(checkKeyDown('6'))
+     		{
+     			this.shouldMove = 1;
+     			this.dir = 1;
+     		}
+     		else if(checkKeyDown('4'))
+     		{
+     			this.shouldMove = 1;
+     			this.dir = -1;
+     		}
+  
+     		if(this.x>=10 && this.x<=750 && this.shouldMove==1)
+     		{
+     			this.x+=(this.dir*this.speed);
+     			this.shouldMove=0;
+     		}
+     		else if(this.x<10)
+     		{
+     			this.x=10;shouldMove=0;
+     		}
+     		else if(this.x>750)
+     		{
+     			this.x=750;this.shouldMove=0;
+     		}
+
+     		this.y-=this.uVer;
+     		this.uVer = this.uVer - this.aVer;
+
+     		if(this.y>=450)
+     		{
+     			this.uVer = 0;
+     			this.aVer = 0;
+     			this.y = 450;
+     			this.isInAir = false;
+     		}
+
+     		if(this.timeTillNextPunch!=0)
+     		{
+     			this.timeTillNextPunch--;
+     			if(this.timeTillNextPunch == 20)
+     			{
+     				this.isPunching = false;
+     				this.width = 80;
+     				this.height = 150;
+     			}
+     		}
+
+     	};
+     	fighter2.isCollidng = function()
+		{
+			var t1 =  (this.x-fighter1.x)/2; var t2 = (this.y - fighter2.y)/2;
+			if(this.dir == 1 && this.x < fighter1.x)
+			{
+				if((this.x + this.width - fighter1.x) > 0 && Math.abs(fighter2.y - fighter1.y) <80)
+				{
+					if(!this.isPunching)
+						this.x+=t1/4;fighter1.x-=t1/4;
+					return true;
+				}
+			}
+			else if(this.dir == -1 && this.x > fighter1.x)
+			{
+				if((this.x - fighter1.x - this.width) < 0 && Math.abs(fighter2.y - fighter1.y) <80)
+				{
+					//t1+=fighter2.width/2;
+					if(!this.isPunching)
+						this.x+=t1/4;fighter1.x-=t1/4;
+					return true;
+				}
+			}
+			else
+				return false;
+		};
+		fighter2.doDamage = function()
+		{
+			if(this.isPunching && this.isCollidng())
+			{
+				if(this.dir!=fighter1.dir)
+					fighter1.getDamaged(10);
+				else
+					fighter1.getDamaged(25);
+			}
+
+		};
+	
+
+
+
+	function initFighters()//init fighters(sprite address)
+	{
+	    fighter1.imgStand1.src="sprites/blue/stand1.png";
+	    fighter1.imgStand2.src="sprites/blue/stand2.png";
+	    fighter1.imgStand1b.src="sprites/blue/stand1b.png";
+	    fighter1.imgStand2b.src="sprites/blue/stand2b.png";
+	    fighter1.imgPunch.src="sprites/blue/punch.png";
+	    fighter1.imgPunchb.src="sprites/blue/punchb.png";
+	    fighter1.Upper.src="sprites/blue/upper.png";
+	    fighter1.Upperb.src="sprites/blue/upperb.png";
+	    fighter1.imgWin.src="sprites/blue/win.png";
+	    fighter1.imgLose.src="sprites/blue/lose.png";
+	    fighter2.imgStand1.src="sprites/hue/stand1.png";
+	    fighter2.imgStand2.src="sprites/hue/stand2.png";
+	    fighter2.imgStand1b.src="sprites/hue/stand1b.png";
+	    fighter2.imgStand2b.src="sprites/hue/stand2b.png";
+	    fighter2.imgPunch.src="sprites/hue/punch.png";
+	    fighter2.imgPunchb.src="sprites/hue/punchb.png";
+	    fighter2.Upper.src="sprites/hue/upper.png";
+	    fighter2.Upperb.src="sprites/hue/upperb.png";
+	    fighter2.imgWin.src="sprites/hue/win.png";
+	    fighter2.imgLose.src="sprites/hue/lose.png";
+	}
+
+
+			
+
+	function clearScreen()
+	{
+			var ctx = gameWindow.context;
+			ctx.clearRect(0,0,800,800);
+	}
+	function update()//CLEAR SCREEN, COLLISSION CHECK, DAMAGE CHECK, UPDATE, DRAW FIGHTERS ON SCREEN,DRAW FIGHTER HEALTH, CHECK WIN
+	{
+
+
+			clearScreen();
+			fighter1.isCollidng();
+			fighter2.isCollidng();
+			fighter1.doDamage();
+			fighter2.doDamage();
+			if(gameState.WinFighter1 == 0 && gameState.WinFighter2 == 0)
+			{	
+				fighter1.update();
+				fighter2.update();
+			}
+
+			drawFighter();
+			drawHealth();
+			checkWin();
+	}
+	var counter = 0;//for gif
+	function drawFighter()//DRAWS UPDATED FIGHTERS
+	{
+
+			var ctx = gameWindow.context;
+			//WAITING FOR BACK GROUND
+	    	ctx.drawImage(gameWindow.terrain, 0,600,800,200);//TERRAIN
+	    	
+	    	ctx.drawImage(backgroundImg[Math.floor((counter++)/2)], 0,0,800,600);//TERRAIN
+	    	if(counter==31)
+	    		counter = 0;
+	    	//PLAYER 1
+			if(gameState.WinFighter1 == 1)//WIN IMAGES
+			{
+				ctx.drawImage(fighter1.imgWin,fighter1.x,fighter1.y);
+				ctx.drawImage(fighter2.imgLose,fighter2.x,fighter2.y + 99);
+					
+			}
+			else if(gameState.WinFighter2 == 1)
+			{
+				ctx.drawImage(fighter2.imgWin,fighter2.x,fighter2.y);
+				ctx.drawImage(fighter1.imgLose,fighter1.x,fighter1.y + 99);
+			}
+
+			else if(fighter1.dir == 1)
+			{
+				
+				if(fighter1.currImageTick <= 8 && !fighter1.isPunching)
+				{
+				 	ctx.drawImage(fighter1.imgStand1, fighter1.x,fighter1.y);
+				 	fighter1.currImageTick ++;
+				}
+				else if(!fighter1.isPunching)
+				{
+				 	
+				 	ctx.drawImage(fighter1.imgStand2, fighter1.x,fighter1.y);
+				 	fighter1.currImageTick++;
+				 	if(fighter1.currImageTick == 16)
+				 	{
+				 		fighter1.currImageTick=0;
+				 	}
+				}
+				else if(fighter1.isPunching && checkKeyDown('s') && fighter1.isInAir)
+				{
+					ctx.drawImage(fighter1.Upper, fighter1.x,fighter1.y);
+				}
+				else if(fighter1.isPunching)
+				{
+					ctx.drawImage(fighter1.imgPunch, fighter1.x,fighter1.y);
+				}
+				
+			}
+			else
+			{
+				if(fighter1.currImageTick <= 8 && !fighter1.isPunching)
+				{
+				 	ctx.drawImage(fighter1.imgStand1b, fighter1.x,fighter1.y);
+				 	fighter1.currImageTick ++;
+				}
+				else if(!fighter1.isPunching)
+				{
+				 	
+				 	ctx.drawImage(fighter1.imgStand2b, fighter1.x,fighter1.y);
+				 	fighter1.currImageTick++;
+				 	if(fighter1.currImageTick == 16)
+				 	{
+				 		fighter1.currImageTick=0;
+				 	}
+				}
+				else if(fighter1.isPunching && checkKeyDown('s') && fighter1.isInAir)
+				{
+					ctx.drawImage(fighter1.Upperb, fighter1.x,fighter1.y);
+				}
+				else if(fighter1.isPunching)
+				{
+					ctx.drawImage(fighter1.imgPunchb, fighter1.x,fighter1.y);
+				}
+			}
+
+
+
+
+			if(gameState.WinFighter1 == 1)
+			{
+				ctx.drawImage(fighter1.imgWin,fighter1.x,fighter1.y);
+				ctx.drawImage(fighter2.imgLose,fighter2.x,fighter2.y + 99);
+					
+			}
+			else if(gameState.WinFighter2 == 1)
+			{
+				ctx.drawImage(fighter2.imgWin,fighter2.x,fighter2.y);
+				ctx.drawImage(fighter1.imgLose,fighter1.x,fighter1.y + 99);
+			}
+			else if(fighter2.dir == 1)
+			{	
+				
+				if(fighter2.currImageTick <= 8 && !fighter2.isPunching)
+				{
+				 	ctx.drawImage(fighter2.imgStand1, fighter2.x,fighter2.y);
+				 	fighter2.currImageTick ++;
+				}
+				else if(!fighter2.isPunching)
+				{
+				 	
+				 	ctx.drawImage(fighter2.imgStand2, fighter2.x,fighter2.y);
+				 	fighter2.currImageTick++;
+				 	if(fighter2.currImageTick == 16)
+				 	{
+				 		fighter2.currImageTick=0;
+				 	}
+				}
+				else if(fighter2.isPunching && checkKeyDown('5') && fighter2.isInAir)
+				{
+					ctx.drawImage(fighter2.Upper, fighter2.x,fighter2.y);
+				}
+				else if(fighter2.isPunching)
+				{
+					ctx.drawImage(fighter2.imgPunch, fighter2.x,fighter2.y);
+				}
+			}
+			else
+			{
+				if(fighter2.currImageTick <= 8 && !fighter2.isPunching)
+				{
+				 	ctx.drawImage(fighter2.imgStand1b, fighter2.x,fighter2.y);
+				 	fighter2.currImageTick ++;
+				}
+				else if(!fighter2.isPunching)
+				{
+				 	
+				 	ctx.drawImage(fighter2.imgStand2b, fighter2.x,fighter2.y);
+				 	fighter2.currImageTick++;
+				 	if(fighter2.currImageTick == 16)
+				 	{
+				 		fighter2.currImageTick=0;
+				 	}
+				}
+				else if(fighter2.isPunching && checkKeyDown('5') && fighter2.isInAir)
+				{
+					ctx.drawImage(fighter2.Upperb, fighter2.x,fighter2.y);
+				}
+				else if(fighter2.isPunching)
+				{
+					ctx.drawImage(fighter2.imgPunchb, fighter2.x,fighter2.y);
+				}
+			}
+	}
+	function drawHealth()//DRAW HEALTH OF FIGHTERS(RED BAR)
+	{
+		var ctx = gameWindow.context;
+		ctx.clearRect(5,5,345,20)
+		ctx.clearRect(450,5,345,20)
+		ctx.fillStyle ="red";
+		if(345*fighter1.health/100 > 0 )
+			ctx.fillRect(5,5,345*fighter1.health/100,20);
+		else
+			ctx.fillRect(5,5,0,20);
+		ctx.fillStyle ="red";
+		if(345*fighter2.health/100 > 0)
+			ctx.fillRect(450,5,345*fighter2.health/100,20);
+		else
+			ctx.fillRect(450,5,0,20);
+	}
+
+	function checkWin()//CHECK WINNING AND WRITE ON SCREE
+	{
+		if(gameState.WinFighter1)
+		{
+			drawText("FIGHTER 1 WON!!");
+		}
+		else if(gameState.WinFighter2)
+		{
+			drawText("FIGHTER 2 WON!!");
+		}
+	}
+
+	function sound(src) 
+	{
+	    this.sound = document.createElement("AUDIO");
+	    this.sound.src = src;
+	    this.sound.setAttribute("preload", "auto");
+	    this.sound.setAttribute("controls", "none");
+	    this.sound.style.display = "none";
+	    document.body.appendChild(this.sound);
+	    this.play = function()
+	    {
+	        this.sound.play();
+	    }
+	    this.stop = function()
+	    {
+	        this.sound.pause();
+    	}
+    	this.volume = function(X)
+    	{
+    		this.sound.volume = X;
+    	}
+	}
+	</script>
+</body>
+</html>
